@@ -91,18 +91,34 @@ class VideoImgsGenerator:
     def __next__(self):
         return next(self._generator)
     
-    # def __getitem__(self, frame_num):
-    #     self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-    #     self.current_frame_num = frame_num - self.step
-    #     return next(self._generator)
+    def __getitem__jump(self, frame_num):
+        self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+        self.current_frame_num = frame_num - self.step
+        return next(self._generator)
     
     def __getitem__(self, frame_num):
         # Reset the generator if already passed the frame
         if self.current_frame_num > frame_num:
             self.setup_img_generator()
         
+        frame_diff = frame_num - self.current_frame_num
+        disable_pbar = False if frame_diff > 500 else True
+        
+        if not disable_pbar:
+            try:
+                return self.__getitem__jump(frame_num)
+            except:
+                # Loop over instead!
+                pass
+        
+        pbar = tqdm(
+            total=frame_diff,
+            disable=disable_pbar,
+            desc=f'From frame {self.current_frame_num} to {frame_num}'
+        )
         while self.current_frame_num < frame_num:
             next(self._generator)
+            pbar.update(1)
             
         return self.current_frame_img
             

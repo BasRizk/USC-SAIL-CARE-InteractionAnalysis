@@ -116,7 +116,7 @@ if __name__ == '__main__':
     # testing begin
     _t = {'forward_pass': Timer(), 'misc': Timer()}
     print("DEBUG: current working directory is", os.getcwd())
-    for video_num, video in enumerate(tqdm(dataset)):
+    for video_num, video in enumerate(tqdm(dataset, desc='Dataset (Videos)')):
         # print(f'starting video {video_num}: {dataset.current_ds}/{video.name}\n')
         logger_file.write(f'starting video {video_num}: {dataset.current_ds}/{video.name}\n')
         logger_file.flush()
@@ -134,7 +134,7 @@ if __name__ == '__main__':
             os.makedirs(ds_dir)
 
         inference_data = []
-        for img_raw in tqdm(video):
+        for img_raw in tqdm(video, desc='Frames'):
             frame_num = video.current_frame_num
             img = np.float32(img_raw)
 
