@@ -89,37 +89,53 @@ class VideoImgsGenerator:
         return self.num_of_imgs
 
     def __next__(self):
-        return next(self._generator)
-    
-    def __getitem__jump(self, frame_num):
-        self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-        self.current_frame_num = frame_num - self.step
-        return next(self._generator)
-    
+        # NOTE: frames are 0-indexed
+        # Generating based on set fps
+        while(True):
+            self.current_frame_img = next(self._generator)
+            if (self.current_frame_num % self.step == 0):
+                break 
+            self.current_frame_num += 1
+        return self.current_frame_img
+        
     def __getitem__(self, frame_num):
+
+        if frame_num == 0:
+            self.current_frame_img = next(self._generator)
+            return self.current_frame_img
+
+
         # Reset the generator if already passed the frame
         if self.current_frame_num > frame_num:
+            # print('reseting generator')
             self.setup_img_generator()
-        
+            
         frame_diff = frame_num - self.current_frame_num
         disable_pbar = False if frame_diff > 500 else True
         
         if not disable_pbar:
             try:
-                return self.__getitem__jump(frame_num)
+                # print('trying to seek')
+                self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+                self.current_frame_num = frame_num
+                self.current_frame_img = next(self._generator)
+                return self.current_frame_img
             except:
                 # Loop over instead!
                 pass
-        
+            
+        # print('iterate')
         pbar = tqdm(
             total=frame_diff,
             disable=disable_pbar,
             desc=f'From frame {self.current_frame_num} to {frame_num}'
         )
+        
         while self.current_frame_num < frame_num:
-            next(self._generator)
+            self.current_frame_img = next(self._generator)
+            self.current_frame_num += 1
             pbar.update(1)
-            
+                
         return self.current_frame_img
             
     def _img_generator(self):
@@ -128,10 +144,7 @@ class VideoImgsGenerator:
             if not ret:
                 self.video_cap.release()
                 break 
-            if (self.current_frame_num % self.step == 0) and ret:
-                self.current_frame_img = frame
-                yield frame 
-            self.current_frame_num += 1
+            yield frame
 
 
 
@@ -156,7 +169,7 @@ class RetinafaceInferenceGenerator:
         for ds in os.listdir(self.faces_dir):
             for filename in os.listdir(os.path.join(*[self.faces_dir, ds])): 
                 yield (ds, filename)
-
+                
 
 
 def write_video_into_img(filepath_dict):                
