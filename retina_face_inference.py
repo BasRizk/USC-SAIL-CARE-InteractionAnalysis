@@ -1,5 +1,4 @@
 from __future__ import print_function
-import sys
 import os
 import glob
 import cv2
@@ -117,7 +116,7 @@ if __name__ == '__main__':
     _t = {'forward_pass': Timer(), 'misc': Timer()}
     print("DEBUG: current working directory is", os.getcwd())
     for video_num, video in enumerate(tqdm(dataset, desc='Dataset (Videos)')):
-        # print(f'starting video {video_num}: {dataset.current_ds}/{video.name}\n')
+        print(f'Starting video {video_num}: {dataset.current_ds}/{video.name}')
         logger_file.write(f'starting video {video_num}: {dataset.current_ds}/{video.name}\n')
         logger_file.flush()
 

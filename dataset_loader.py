@@ -1,6 +1,5 @@
 # -*- coding: future_fstrings -*- 
 import os
-import glob
 import subprocess
 import pickle
 from tqdm import tqdm
@@ -35,6 +34,7 @@ class DatasetLoader:
     def __getitem__(self, item):
         ds, video_name = item
         filepath = self.filepath_dict[(video_name, ds)]
+        self.current_ds = ds
         return VideoImgsGenerator(filepath, self.fps)
         
         
@@ -50,7 +50,10 @@ class DatasetLoader:
     def _videos_generator(self):
         for self.current_file_num, filedata in enumerate(self.filepaths):
             filepath, self.current_ds = filedata
-            yield VideoImgsGenerator(filepath, self.fps)
+            try:
+                yield VideoImgsGenerator(filepath, self.fps)
+            except:
+                print(f'File {filepath} may be corrupted and is to be skipped')
 
     def close(self):
         cv2.destroyAllWindows()
@@ -145,31 +148,6 @@ class VideoImgsGenerator:
                 self.video_cap.release()
                 break 
             yield frame
-
-
-
-
-class RetinafaceInferenceGenerator:
-
-    def __init__(self, faces_dir, files_location='*/*'):
-        self.faces_dir = faces_dir
-        self.num_of_files = len(glob.glob(f'{faces_dir}/{files_location}'))
-        self._generator = self._faces_files_generator()
-    
-    def __iter__(self):
-        return self
-
-    def __len__(self):
-        return self.num_of_files
-
-    def __next__(self):
-        return next(self._generator)
-            
-    def _faces_files_generator(self):
-        for ds in os.listdir(self.faces_dir):
-            for filename in os.listdir(os.path.join(*[self.faces_dir, ds])): 
-                yield (ds, filename)
-                
 
 
 def write_video_into_img(filepath_dict):                

@@ -18,7 +18,8 @@ import torch
 
 import cv2
 from tqdm import tqdm
-from dataset_loader import DatasetLoader, RetinafaceInferenceGenerator
+from dataset_loader import DatasetLoader
+from annotations_loader import RetinafaceInferenceGenerator
 
 
 parser = argparse.ArgumentParser(description='Attention-Target')
@@ -61,19 +62,14 @@ if __name__ == "__main__":
     # set up data transformation
     test_transforms = _get_transform()
     
-    num_of_processed_videos = 0
     with torch.no_grad():
         for ds, filename in tqdm(faces_files):
             video_name = filename.split(".")[0]
-            print('starting video ' + ds + '/' + video_name)
+            print('Starting video ' + ds + '/' + video_name)
 
-            logger_file.write('starting video ' + ds + '/' + video_name + '\n')
+            logger_file.write('Starting video ' + ds + '/' + video_name + '\n')
             logger_file.flush()
-            
-            if num_of_processed_videos > 1:
-                break
-            num_of_processed_videos += 1
-        
+
             ds_dir = os.path.join(target_dir, ds)
             if not os.path.exists(ds_dir):
                 os.makedirs(ds_dir)
