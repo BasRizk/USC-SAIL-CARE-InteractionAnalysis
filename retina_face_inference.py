@@ -19,7 +19,6 @@ from models.retinaface import RetinaFace
 from utils.box_utils import decode, decode_landm
 from utils.timer import Timer
 
-import orientation_calculator
 from dataset_loader import DatasetLoader
 
 
@@ -30,12 +29,12 @@ parser.add_argument('-m', '--trained_model',
 parser.add_argument('--network', default='resnet50', help='Backbone network mobile0.25 or resnet50')
 parser.add_argument('--origin_size', default=True, type=str, help='Whether use origin image size to evaluate')
 parser.add_argument('--save_dir', default='/proj/brizk/output/retinaface', type=str, help='Dir to save txt results')
-parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
+# parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
 parser.add_argument('--confidence_threshold', default=0.60, type=float, help='confidence_threshold')
 parser.add_argument('--top_k', default=5000, type=int, help='top_k')
 parser.add_argument('--nms_threshold', default=0.4, type=float, help='nms_threshold')
 parser.add_argument('--keep_top_k', default=750, type=int, help='keep_top_k')
-parser.add_argument('-s', '--save_image', action="store_true", default=False, help='show detection results')
+# parser.add_argument('-s', '--save_image', action="store_true", default=False, help='show detection results')
 parser.add_argument('--vis_thres', default=0.6, type=float, help='visualization_threshold')
 args = parser.parse_args()
 
@@ -79,11 +78,11 @@ def load_model(model, pretrained_path, load_to_cpu):
     
 if __name__ == '__main__':
 
-    if args.save_image:
-        imgs_save_folder = args.save_dir + "/imgs"
-        if not os.path.isdir(imgs_save_folder):
-            os.makedirs(imgs_save_folder)
-            print("creating imgs directory")
+    # if args.save_image:
+    #     imgs_save_folder = args.save_dir + "/imgs"
+    #     if not os.path.isdir(imgs_save_folder):
+    #         os.makedirs(imgs_save_folder)
+    #         print("creating imgs directory")
     
     if not os.path.isdir(args.save_dir):
         os.makedirs(args.save_dir)
@@ -97,7 +96,7 @@ if __name__ == '__main__':
         cfg = cfg_re50
     # net and model
     net = RetinaFace(cfg=cfg, phase = 'test')
-    net = load_model(net, args.trained_model, args.cpu)
+    net = load_model(net, args.trained_model, False)
     net.eval()
     print('Finished loading model!')
     print(net)
@@ -213,6 +212,7 @@ if __name__ == '__main__':
                 continue
         
             bboxs = dets
+            # bboxs = np.round(dets, 2)
             for box in bboxs:
                 confidence = str(box[4])
                 inference_data.append(
@@ -222,12 +222,12 @@ if __name__ == '__main__':
             # print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, video.num_of_imgs, _t['forward_pass'].average_time, _t['misc'].average_time))
 
             # save image of inference
-            if args.save_image:
-                orientation_calculator.draw(
-                    img_raw, dets,
-                    f'{args.save_dir}/{frame_num}',
-                    args.vis_thres
-                )
+            # if args.save_image:
+            #     orientation_calculator.draw(
+            #         img_raw, dets,
+            #         f'{args.save_dir}/{frame_num}',
+            #         args.vis_thres
+            #     )
         
         with open(video_save_filepath, "w",  encoding='UTF8', newline='') as f:
             csv.writer(f).writerows(inference_data)
