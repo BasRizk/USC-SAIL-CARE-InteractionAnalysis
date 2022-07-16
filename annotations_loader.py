@@ -21,12 +21,14 @@ class AnnotationsLoader:
     
     def __init__(self, ds, video_name,
                  faces_dir='/proj/brizk/output/retinaface',
-                 attention_dir='/proj/brizk/output/attentiontarget'):
+                 attention_dir='/proj/brizk/output/attentiontarget',
+                 faces_confidence_thres=0.0):
         self.ds = ds
         self.video_name = video_name
         
         if faces_dir:
             self.faces_dir = faces_dir
+            self.faces_confidence_thres = faces_confidence_thres
 
             column_names = [
                 'frame', 'confidence', 'left', 'top', 'right', 'bottom'
@@ -37,27 +39,55 @@ class AnnotationsLoader:
                 ),
                 header=None, names=column_names, usecols=range(6)
             )            
-            self._faces_generator = self._faces_gen()
         
         if attention_dir:
             self.attention_dir = attention_dir
             with open(
                 f'{self.attention_dir}/{self.ds}/{self.video_name}.pkl', 'rb'
             ) as f:    
-                self.attention_file = np.array(pickle.load(f))
+                self.attention_file = pd.DataFrame(pickle.load(f))
+
+        self.validate_and_filter()
+
+        if self.faces_file is not None:
+            self._faces_generator = self._faces_gen()
+        if self.attention_file is not None:
             self._attention_generator = self._attention_gen()
-        
+
+
+
+    def validate_and_filter(self):
+        if self.faces_file is not None and self.attention_file is not None:
+            assert len(self.attention_file) == len(self.faces_file)
+
+            filter_selection =\
+                self.faces_file['confidence'] >= self.faces_confidence_thres
+            print(len(self.faces_file))
+            self.faces_file = self.faces_file[filter_selection]
+            print(len(self.faces_file))
+            self.attention_file = self.attention_file[filter_selection]
+            print('filtered')
+
+    def __len__(self):
+        return len(self.faces_file)
+    
     def __iter__(self):
         return self
 
     def __next__(self):
-        
-        
         faces_per_frame = next(self._faces_generator)
         attention_per_frame = next(self._attention_generator)
-        indices = faces_per_frame.index
+        
+        if faces_per_frame is None or attention_per_frame is None:
+            if faces_per_frame is None and attention_per_frame is None:
+                return None
+            raise Exception('Annotation from faces/attention is missing!')
+            
+        faces_per_frame = faces_per_frame.reset_index()
+        attention_per_frame = attention_per_frame.reset_index()
+        # indices = faces_per_frame.index
         return {
-            'frame': faces_per_frame.loc[indices[0], 'frame'],
+            'frame': faces_per_frame.loc[0, 'frame'],
             'faces': faces_per_frame,
             'attention': attention_per_frame,
         }
@@ -74,40 +104,47 @@ class AnnotationsLoader:
             'faces': faces_per_frame,
             'attention': attention_per_frame
         }
-        
-        
-    def _faces_gen(self):
+
+
+    def _gen_df(self, df):
         frame_collection = []
-        for i in self.faces_file.index:
+        for i in df.index:
             if not frame_collection:
                 frame_collection = [i]  
-            elif frame_collection[-1] == self.faces_file.loc[i, 'frame']:
+            elif df.loc[frame_collection[-1], 'frame']\
+                 == df.loc[i, 'frame']:
                 frame_collection.append(i)
             else:
-                yield self.faces_file.loc[
+                yield df.loc[
                     frame_collection[0]:frame_collection[-1]
                 ]
                 frame_collection = [i]
 
         if frame_collection:
-            yield self.faces_file.loc[
+            yield df.loc[
                 frame_collection[0]:frame_collection[-1]
             ]
-
+        
+        
+    def _faces_gen(self):
+        return self._gen_df(self.faces_file)
 
     def _attention_gen(self):
-        frame_collection = []
-        for inference in self.attention_file:
-            if not frame_collection:
-                frame_collection = [inference]
-            elif frame_collection[-1] == inference['frame']:
-                frame_collection.append(inference)
-            else:
-                yield frame_collection
-                frame_collection = [inference]
+        return self._gen_df(self.attention_file)
+
+    # def _attention_gen(self):
+    #     frame_collection = []
+    #     for inference in self.attention_file:
+    #         if not frame_collection:
+    #             frame_collection = [inference]
+    #         elif frame_collection[-1]['frame'] == inference['frame']:
+    #             frame_collection.append(inference)
+    #         else:
+    #             yield frame_collection
+    #             frame_collection = [inference]
         
-        if frame_collection:
-            yield frame_collection
+    #     if frame_collection:
+    #         yield frame_collection
         
 
 class RetinafaceInferenceGenerator:
