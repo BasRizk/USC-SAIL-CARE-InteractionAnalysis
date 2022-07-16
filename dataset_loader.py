@@ -75,13 +75,13 @@ class VideoImgsGenerator:
         else:
             self.step = 1
         
-        self.num_of_imgs = ceil(self.org_frame_count/self.step)
+        self.num_of_selected_frames = ceil(self.org_frame_count/self.step)
         self.length = self.org_frame_count/self.org_fps
         self.setup_img_generator()
         # print("total frame count", self.current_video_frame_count, 'length', length)
     
     def setup_img_generator(self):
-        self.current_frame_num = 0
+        self.current_frame_num = -1
         self.current_frame_img = None
         self._generator = self._img_generator()
     
@@ -89,24 +89,23 @@ class VideoImgsGenerator:
         return self
 
     def __len__(self):
-        return self.num_of_imgs
+        return self.num_of_selected_frames
 
     def __next__(self):
         # NOTE: frames are 0-indexed
         # Generating based on set fps
         while(True):
             self.current_frame_img = next(self._generator)
-            if (self.current_frame_num % self.step == 0):
-                break 
             self.current_frame_num += 1
+            if (self.current_frame_num % self.step == 0) or\
+                self.current_frame_img is None:
+                break 
         return self.current_frame_img
         
     def __getitem__(self, frame_num):
-
-        if frame_num == 0:
-            self.current_frame_img = next(self._generator)
-            return self.current_frame_img
-
+        # NOTE: frames are 0-indexed
+        if frame_num < 0:
+            raise IndexError(f'Accepted only range between 0:{self.org_frame_count}')
 
         # Reset the generator if already passed the frame
         if self.current_frame_num > frame_num:
