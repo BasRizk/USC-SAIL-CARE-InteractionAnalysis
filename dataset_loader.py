@@ -52,7 +52,7 @@ class DatasetLoader:
             filepath, self.current_ds = filedata
             try:
                 yield VideoImgsGenerator(filepath, self.fps)
-            except:
+            except ZeroDivisionError:
                 print(f'File {filepath} may be corrupted and is to be skipped')
 
     def close(self):
